@@ -71,6 +71,8 @@ devicetree = p.ZeroOrMore(directive ^ node_definition)
 devicetree.ignore(p.cStyleComment)
 devicetree.ignore("//" + p.SkipTo(p.lineEnd))
 
+#devicetree.set_debug(True, True)
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         devicetree.parseFile(sys.argv[1]).pprint()

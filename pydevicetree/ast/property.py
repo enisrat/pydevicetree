@@ -104,8 +104,10 @@ class RegArray(CellArray):
 
         if not names:
             names = []
+        # extend names list to fit reg
+        names += [None]*(len(grouped_cells) - len(names))
 
-        for group, name in zip_longest(grouped_cells, cast(Iterable[Any], names)):
+        for group, name in zip(grouped_cells, cast(Iterable[Any], names[:len(grouped_cells)])):
             address = 0
             a_cells = list(reversed(group[:self.address_cells]))
             for a, i in zip(a_cells, range(len(a_cells))):
