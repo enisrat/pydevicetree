@@ -298,6 +298,21 @@ class Node:
                                 reg_names.values)
             return RegArray(reg.values, self.address_cells(), self.size_cells())
         return None
+    
+    def get_reg_trans(self):
+        reg = self.get_reg()
+
+        if not reg:
+            return []
+
+        parent_ranges = self.parent.get_ranges()
+        # only check parent, we do not support multiple layers of translation!
+        translate = parent_ranges.translate if parent_ranges else lambda x:x
+
+        for child_addr, sz, name in reg.tuples:
+            addr = translate(child_addr)
+            yield addr, sz, name
+
 
     def get_ranges(self) -> Optional[RangeArray]:
         """If the node defines a `ranges` property, return a RangeArray for easier querying"""
@@ -315,11 +330,12 @@ class Node:
         The #address-cells property is defined by the parent of a node and describes how addresses
         are encoded in cell arrays. If no property is defined, the default value is 2.
         """
-        if self.parent is not None:
-            cells = self.parent.get_field("#address-cells")
+        ancestor = self.parent
+        while ancestor:
+            cells = ancestor.get_field("#address-cells")
             if cells is not None:
                 return cells
-            return 2
+            ancestor = ancestor.parent
         return 2
 
     def size_cells(self):
@@ -328,11 +344,12 @@ class Node:
         The #size-cells property is defined by the parent of a node and describes how addresses
         are encoded in cell arrays. If no property is defined, the default value is 1.
         """
-        if self.parent is not None:
-            cells = self.parent.get_field("#size-cells")
+        ancestor = self.parent
+        while ancestor:
+            cells = ancestor.get_field("#size-cells")
             if cells is not None:
                 return cells
-            return 1
+            ancestor = ancestor.parent
         return 1
 
 class NodeReference(Node):
@@ -498,3 +515,14 @@ class Devicetree(Node):
                     return p.values
 
         return None
+
+    def build_physaddr_map(self):
+
+        phys_map = [] #[(phys_addr, sz, name, Node)]
+        for n in self.all_nodes():
+            regs = n.get_reg_trans()
+            for addr, sz, name in regs:
+                phys_map.append( (addr, sz, name, n ) )
+        phys_map = sorted(phys_map, key=lambda x:x[1], reverse=True) # Bigger MMIO sizes first!
+        phys_map = sorted(phys_map, key=lambda x:x[0])
+        return phys_map

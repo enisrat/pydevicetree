@@ -183,6 +183,13 @@ class RangeArray(CellArray):
 
     def __getitem__(self, key) -> Any:
         return self.tuples[key]
+    
+    def translate(self, child_addr):
+        """return the physical address given the child address"""
+        for r in self.tuples:
+            if r[0] <= child_addr < r[0]+ r[2]:
+                return (child_addr-r[0]) + r[1]
+        return child_addr
 
 class StringList(PropertyValues):
     """A StringList is a list of null-terminated strings
